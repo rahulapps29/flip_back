@@ -3,6 +3,7 @@ const express = require('express');
 const connectDB = require('./config/db');
 const cors = require('cors');
 const employeeRoutes = require('./routes/employeeRoutes');
+const authRoutes = require('./routes/authRoutes');
 
 const app = express();
 
@@ -11,6 +12,9 @@ app.use(cors());
 
 connectDB();
 
+
+
+app.use('/api/auth', authRoutes);
 app.use('/api', employeeRoutes);
 
 const PORT = process.env.PORT || 4043;
