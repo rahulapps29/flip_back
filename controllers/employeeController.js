@@ -176,3 +176,40 @@ const sendEmails = async (req, res) => {
 };
 
 module.exports = { bulkUpload, submitForm, getDashboard, deleteAllEmployees, sendEmails };
+
+
+
+// Delete a single employee
+const deleteEmployee = async (req, res) => {
+    const { id } = req.params;
+    try {
+      const result = await Employee.findByIdAndDelete(id);
+      if (result) {
+        res.json({ message: 'Employee deleted successfully!' });
+      } else {
+        res.status(404).json({ message: 'Employee not found.' });
+      }
+    } catch (err) {
+      res.status(500).json({ message: 'Error deleting employee.', error: err.message });
+    }
+  };
+  
+  // Update a single employee
+  const updateEmployee = async (req, res) => {
+    const { id } = req.params;
+    const updateData = req.body;
+  
+    try {
+      const updatedEmployee = await Employee.findByIdAndUpdate(id, updateData, { new: true });
+      if (updatedEmployee) {
+        res.json({ message: 'Employee updated successfully!', employee: updatedEmployee });
+      } else {
+        res.status(404).json({ message: 'Employee not found.' });
+      }
+    } catch (err) {
+      res.status(500).json({ message: 'Error updating employee.', error: err.message });
+    }
+  };
+  
+  module.exports = { bulkUpload, submitForm, getDashboard, deleteAllEmployees, sendEmails, deleteEmployee, updateEmployee };
+  
