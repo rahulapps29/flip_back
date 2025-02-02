@@ -133,37 +133,77 @@ const deleteAllEmployees = async (req, res) => {
 const sendEmails = async (req, res) => {
   try {
     const employees = await Employee.find();
+
     const promises = employees.map(async (employee) => {
       const uniqueLink = generateUniqueLink(employee.internetEmail, 'email');
-      console.log('Generated Link:', uniqueLink);
+
+      console.log("LINK---->",uniqueLink)
+      
       await transporter.sendMail({
         from: process.env.EMAIL_USER,
         to: employee.internetEmail,
-        subject: 'Please Complete Your Form',
-        text: `Click the following link to complete your form: ${uniqueLink}`,
+        subject: 'Urgent: Physical Verification of Laptops – FY 24-25',
+        text: `
+Dear ${employee.employeeId}, 
+
+As part of the mandatory asset verification process for the financial year FY 24-25, a physical verification of laptops issued to employees is being conducted by Protiviti India Member Private Limited. This is a statutory requirement under the Companies (Auditor’s Report) Order, 2016 (CARO), and must be completed to ensure compliance with regulatory standards.
+
+**Action Required:**
+We request you to confirm the details of the laptop assigned to you by the organization. Please verify:
+- Laptop Serial Number
+- Make and Model
+- Condition of the Laptop
+- Any other identifying information
+
+**How to Find the Serial Number:**
+1. Press **Windows + R**, type **cmd**, press Enter.
+2. Type **"wmic bios get serialnumber"** and press Enter.
+
+**Deadline for Confirmation:**  
+Please confirm your details within **one week**, no later than [Insert Date].
+
+**Non-Confirmation:**  
+Failure to confirm will lead to recovery as per the Laptop and Desktop Issuance Policy:
+- INR 1,00,000 for Windows Laptops
+- INR 2,00,000 for MacBooks
+
+[Complete the Form Here](${uniqueLink})
+
+Thank you for your prompt attention.
+
+Best regards,
+Asset Management Team
+        `
       });
+
+      employee.lastEmailSent = new Date();
+      await employee.save();
     });
 
     await Promise.all(promises);
-    res.json({ message: 'Emails sent to all employees successfully!' });
+    res.json({ message: 'Emails sent successfully!' });
   } catch (err) {
     res.status(500).json({ message: 'Error sending emails.', error: err });
   }
 };
 
 
+
 const getForm = async (req, res) => {
-  const { identifier, type } = req.user; // Extracted from the JWT
+  const { identifier } = req.user;
+
   try {
     const employee = await Employee.findOne({ internetEmail: identifier });
     if (!employee) {
       return res.status(404).json({ message: 'Employee not found.' });
     }
-    res.status(200).json({ message: 'Form access granted.', employee });
+    
+    res.status(200).json({ employee });
   } catch (err) {
     res.status(500).json({ message: 'Error accessing form.', error: err.message });
   }
 };
+
 
 
 
