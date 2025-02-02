@@ -4,6 +4,7 @@ const multer = require('multer');
 const csv = require('csv-parser');
 const fs = require('fs');
 const generateUniqueLink = require('../utils/linkGenerator'); // Import the utility
+const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
 // Multer setup for file uploads
@@ -79,28 +80,52 @@ const sendEmail = async (employee) => {
   await employee.save();
 };
 
-// Submit Form
+
 const submitForm = async (req, res) => {
-  const { token, formDetails } = req.body;
+  const { token, formDetails, serialNumber } = req.body;
+  console.log({formDetails}, serialNumber)
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET); // Verify the token
-    const { identifier } = decoded;
+    // Verify the token to authenticate the user
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const { identifier } = decoded; // This should be the user's email
 
+    // Find the employee based on the email
     const employee = await Employee.findOne({ internetEmail: identifier });
+
     if (!employee) {
       return res.status(404).json({ message: 'Employee not found.' });
     }
+console.log(`database value : ${employee.serialNumber}`)
+    // Reconcile the serial number
+    if (employee.serialNumber === serialNumber) {
+      employee.reconciliationStatus = 'Yes'; // Update reconciliation status
+      employee.serialNumberEntered = serialNumber; // Store the entered serial number
+      employee.assetCondition = formDetails.assetCondition || employee.assetCondition; // Update asset condition if provided
 
-    employee.formDetails = formDetails;
-    employee.formFilled = true;
-    await employee.save();
+      await employee.save();
 
-    res.json({ message: 'Form submitted successfully!', correct: true });
+      return res.status(200).json({ 
+        message: 'Form submitted successfully and serial number reconciled.', 
+        correct: true 
+      });
+    } else {
+      return res.status(400).json({ 
+        message: 'Serial number does not match our records.', 
+        correct: false 
+      });
+    }
   } catch (err) {
-    res.status(401).json({ message: 'Invalid or expired token.', correct: false });
+    console.error('Error:', err);
+    return res.status(401).json({ 
+      message: 'Invalid or expired token.', 
+      correct: false 
+    });
   }
 };
+
+
+
 
 const getDashboard = async (req, res) => {
     try {
