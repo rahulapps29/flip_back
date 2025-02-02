@@ -1,13 +1,13 @@
-// Utility to generate unique form submission links
+const jwt = require('jsonwebtoken');
+const { v4: uuidv4 } = require('uuid');
+
 const generateUniqueLink = (identifier, type = 'email') => {
-    const baseUrl = 'https://flipkart.algoapp.in/form';
-    
-    if (type === 'serialNumber') {
-      return `${baseUrl}?serialNumber=${identifier}`;
-    } else {
-      return `${baseUrl}?email=${identifier}`;
-    }
-  };
-  
-  module.exports = generateUniqueLink;
-  
+  const token = jwt.sign(
+    { identifier, type, nonce: uuidv4() },  // Adding unique nonce
+    process.env.JWT_SECRET,
+    { expiresIn: '1h' }
+  );
+  return `https://flipkart.algoapp.in/form?token=${token}`;
+};
+
+module.exports = generateUniqueLink;

@@ -96,16 +96,24 @@ const sendEmail = async (employee) => {
 
 // Submit Form
 const submitForm = async (req, res) => {
-  const { serialNumber, formDetails } = req.body;
-  const employee = await Employee.findOne({ serialNumbers: serialNumber });
+  const { token, formDetails } = req.body;
 
-  if (employee) {
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET); // Verify the token
+    const { identifier } = decoded;
+
+    const employee = await Employee.findOne({ internetEmail: identifier });
+    if (!employee) {
+      return res.status(404).json({ message: 'Employee not found.' });
+    }
+
     employee.formDetails = formDetails;
     employee.formFilled = true;
     await employee.save();
+
     res.json({ message: 'Form submitted successfully!', correct: true });
-  } else {
-    res.json({ message: 'Incorrect Serial Number. Please try again.', correct: false });
+  } catch (err) {
+    res.status(401).json({ message: 'Invalid or expired token.', correct: false });
   }
 };
 
@@ -160,6 +168,7 @@ const sendEmails = async (req, res) => {
     const employees = await Employee.find();
     const promises = employees.map(async (employee) => {
       const uniqueLink = generateUniqueLink(employee.internetEmail, 'email');
+      console.log('Generated Link:', uniqueLink);
       await transporter.sendMail({
         from: process.env.EMAIL_USER,
         to: employee.internetEmail,
@@ -175,7 +184,21 @@ const sendEmails = async (req, res) => {
   }
 };
 
-module.exports = { bulkUpload, submitForm, getDashboard, deleteAllEmployees, sendEmails };
+
+const getForm = async (req, res) => {
+  const { identifier, type } = req.user; // Extracted from the JWT
+  try {
+    const employee = await Employee.findOne({ internetEmail: identifier });
+    if (!employee) {
+      return res.status(404).json({ message: 'Employee not found.' });
+    }
+    res.status(200).json({ message: 'Form access granted.', employee });
+  } catch (err) {
+    res.status(500).json({ message: 'Error accessing form.', error: err.message });
+  }
+};
+
+module.exports = { bulkUpload, submitForm, getDashboard, deleteAllEmployees, sendEmails, getForm };
 
 
 
