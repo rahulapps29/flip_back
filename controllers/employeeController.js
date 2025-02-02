@@ -137,42 +137,46 @@ const sendEmails = async (req, res) => {
     const promises = employees.map(async (employee) => {
       const uniqueLink = generateUniqueLink(employee.internetEmail, 'email');
 
-      console.log("LINK---->",uniqueLink)
-      
+      console.log("LINK---->", uniqueLink);
+
       await transporter.sendMail({
         from: process.env.EMAIL_USER,
         to: employee.internetEmail,
         subject: 'Urgent: Physical Verification of Laptops – FY 24-25',
-        text: `
-Dear ${employee.employeeId}, 
+        html: `
+          <p>Dear ${employee.employeeId},</p>
 
-As part of the mandatory asset verification process for the financial year FY 24-25, a physical verification of laptops issued to employees is being conducted by Protiviti India Member Private Limited. This is a statutory requirement under the Companies (Auditor’s Report) Order, 2016 (CARO), and must be completed to ensure compliance with regulatory standards.
+          <p>As part of the mandatory asset verification process for the financial year FY 24-25, a physical verification of laptops issued to employees is being conducted by Protiviti India Member Private Limited. This is a statutory requirement under the Companies (Auditor’s Report) Order, 2016 (CARO), and must be completed to ensure compliance with regulatory standards.</p>
 
-**Action Required:**
-We request you to confirm the details of the laptop assigned to you by the organization. Please verify:
-- Laptop Serial Number
-- Make and Model
-- Condition of the Laptop
-- Any other identifying information
+          <p><strong>Action Required:</strong></p>
+          <ul>
+            <li>Verify Laptop Serial Number</li>
+            <li>Make and Model</li>
+            <li>Condition of the Laptop</li>
+            <li>Any other identifying information</li>
+          </ul>
 
-**How to Find the Serial Number:**
-1. Press **Windows + R**, type **cmd**, press Enter.
-2. Type **"wmic bios get serialnumber"** and press Enter.
+          <p><strong>How to Find the Serial Number:</strong></p>
+          <ol>
+            <li>Press <strong>Windows + R</strong>, type <strong>cmd</strong>, press Enter.</li>
+            <li>Type <strong>"wmic bios get serialnumber"</strong> and press Enter.</li>
+          </ol>
 
-**Deadline for Confirmation:**  
-Please confirm your details within **one week**, no later than [Insert Date].
+          <p><strong>Deadline for Confirmation:</strong><br>
+          Please confirm your details within <strong>one week</strong>, no later than [Insert Date].</p>
 
-**Non-Confirmation:**  
-Failure to confirm will lead to recovery as per the Laptop and Desktop Issuance Policy:
-- INR 1,00,000 for Windows Laptops
-- INR 2,00,000 for MacBooks
+          <p><strong>Non-Confirmation:</strong><br>
+          Failure to confirm will lead to recovery as per the Laptop and Desktop Issuance Policy:</p>
+          <ul>
+            <li>INR 1,00,000 for Windows Laptops</li>
+            <li>INR 2,00,000 for MacBooks</li>
+          </ul>
 
-[Complete the Form Here](${uniqueLink})
+          <p><a href="${uniqueLink}" style="color: blue; text-decoration: underline; font-weight: bold;">Complete the Form Here</a></p>
 
-Thank you for your prompt attention.
+          <p>Thank you for your prompt attention.</p>
 
-Best regards,
-Asset Management Team
+          <p>Best regards,<br>Asset Management Team</p>
         `
       });
 
@@ -186,6 +190,7 @@ Asset Management Team
     res.status(500).json({ message: 'Error sending emails.', error: err });
   }
 };
+
 
 
 
