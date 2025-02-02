@@ -197,12 +197,16 @@ const getForm = async (req, res) => {
     if (!employee) {
       return res.status(404).json({ message: 'Employee not found.' });
     }
-    
-    res.status(200).json({ employee });
+
+    const name = employee.internetEmail.split('@')[0]; // Extract name from email
+    const email = employee.internetEmail;
+
+    res.status(200).json({ name, email }); // Send only name and email
   } catch (err) {
     res.status(500).json({ message: 'Error accessing form.', error: err.message });
   }
 };
+
 
 
 
