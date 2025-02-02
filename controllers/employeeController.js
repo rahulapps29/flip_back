@@ -20,64 +20,49 @@ const transporter = nodemailer.createTransport({
 
 
 
-// Bulk upload employees
+// Bulk Upload Function
 const bulkUpload = async (req, res) => {
-
     if (!req.file) {
         return res.status(400).json({ message: 'No file uploaded.' });
-      }
-    
-      const filePath = req.file.path;
-      const employees = [];
-    
-      fs.createReadStream(filePath)
+    }
+
+    const filePath = req.file.path;
+    const employees = [];
+
+    fs.createReadStream(filePath)
         .pipe(csv())
         .on('data', (row) => {
-          // Map CSV row to the employee schema
-          const employee = {
-            itamOrganization: row['itamOrganization'],
-            assetId: row['assetId'],
-            serialNumber: row['serialNumber'],
-            manufacturerName: row['manufacturerName'],
-            modelVersion: row['modelVersion'],
-            building: row['building'],
-            locationId: row['locationId'],
-            internetEmail: row['internetEmail'],
-            department: row['department'],
-            employeeId: row['employeeId'],
-            managerEmployeeId: row['managerEmployeeId'],
-            managerEmailId: row['managerEmailId'],
-            emailDelivery: row['emailDelivery'],
-            serialNumberEntered: row['serialNumberEntered'],
-            reconciliationStatus: row['reconciliationStatus'],
-            assetCondition: row['assetCondition'],
-          };
-    
-          employees.push(employee);
+            const employee = {};
+
+            // Dynamically map all columns
+            Object.keys(row).forEach(key => {
+                employee[key] = row[key];
+            });
+
+            employees.push(employee);
         })
         .on('end', async () => {
-          try {
-            // Perform bulk write operation
-            const bulkOps = employees.map((employee) => ({
-              updateOne: {
-                filter: { internetEmail: employee.internetEmail }, // Use internetEmail as the unique identifier
-                update: { $set: employee },
-                upsert: true, // Insert if not found, update if found
-              },
-            }));
-    
-            await Employee.bulkWrite(bulkOps);
-            res.status(200).json({ message: 'Bulk upload successful!', count: employees.length });
-          } catch (err) {
-            console.error('Error in bulk write:', err);
-            res.status(500).json({ message: 'Error uploading employees.', error: err.message });
-          } finally {
-            fs.unlinkSync(filePath); // Delete the file after processing
-          }
+            try {
+                const bulkOps = employees.map((employee) => ({
+                    updateOne: {
+                        filter: { internetEmail: employee.internetEmail },
+                        update: { $set: employee },
+                        upsert: true,
+                    },
+                }));
+
+                await Employee.bulkWrite(bulkOps);
+                res.status(200).json({ message: 'Bulk upload successful!', count: employees.length });
+            } catch (err) {
+                console.error('Error in bulk write:', err);
+                res.status(500).json({ message: 'Error uploading employees.', error: err.message });
+            } finally {
+                fs.unlinkSync(filePath);
+            }
         })
         .on('error', (err) => {
-          console.error('Error reading CSV file:', err);
-          res.status(500).json({ message: 'Error processing CSV file.', error: err.message });
+            console.error('Error reading CSV file:', err);
+            res.status(500).json({ message: 'Error processing CSV file.', error: err.message });
         });
 };
 
@@ -117,37 +102,19 @@ const submitForm = async (req, res) => {
   }
 };
 
-// Dashboard
 const getDashboard = async (req, res) => {
     try {
-        const employees = await Employee.find();
-        const report = employees.map(emp => ({
-          itamOrganization: emp.itamOrganization,
-          assetId: emp.assetId,
-          serialNumber: emp.serialNumber,
-          manufacturerName: emp.manufacturerName,
-          modelVersion: emp.modelVersion,
-          building: emp.building,
-          locationId: emp.locationId,
-          internetEmail: emp.internetEmail,
-          department: emp.department,
-          employeeId: emp.employeeId,
-          managerEmployeeId: emp.managerEmployeeId,
-          managerEmailId: emp.managerEmailId,
-          emailDelivery: emp.emailDelivery,
-          serialNumberEntered: emp.serialNumberEntered,
-          reconciliationStatus: emp.reconciliationStatus,
-          assetCondition: emp.assetCondition,
-          formFilled: emp.formFilled || false, // Default to false if not present
-          formDetails: emp.formDetails || null, // Default to null if not present
-        }));
-        res.status(200).json(report);
-      } catch (err) {
-        console.error('Error fetching dashboard data:', err);
-        res.status(500).json({ message: 'Error fetching dashboard data.', error: err.message });
-      }
-};
-
+      // Fetch all employee data dynamically
+      const employees = await Employee.find().lean(); // Using .lean() for better performance
+  
+      // Send the entire data directly without mapping
+      res.status(200).json(employees);
+    } catch (err) {
+      console.error('Error fetching dashboard data:', err);
+      res.status(500).json({ message: 'Error fetching dashboard data.', error: err.message });
+    }
+  };
+  
 
 
 
@@ -198,8 +165,6 @@ const getForm = async (req, res) => {
   }
 };
 
-module.exports = { bulkUpload, submitForm, getDashboard, deleteAllEmployees, sendEmails, getForm };
-
 
 
 // Delete a single employee
@@ -234,5 +199,5 @@ const deleteEmployee = async (req, res) => {
     }
   };
   
-  module.exports = { bulkUpload, submitForm, getDashboard, deleteAllEmployees, sendEmails, deleteEmployee, updateEmployee };
+  module.exports = { bulkUpload, submitForm, getDashboard, deleteAllEmployees, sendEmails, deleteEmployee, updateEmployee , getForm};
   
