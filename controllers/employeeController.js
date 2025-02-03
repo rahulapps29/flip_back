@@ -19,71 +19,95 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-
-
-// Bulk Upload Function
+// -----------------------------------
+// 1) Bulk Upload Function
+// -----------------------------------
 const bulkUpload = async (req, res) => {
-    if (!req.file) {
-        return res.status(400).json({ message: 'No file uploaded.' });
-    }
+  if (!req.file) {
+    return res.status(400).json({ message: 'No file uploaded.' });
+  }
 
-    const filePath = req.file.path;
-    const employees = [];
+  const filePath = req.file.path;
+  const employees = [];
 
-    fs.createReadStream(filePath)
-        .pipe(csv())
-        .on('data', (row) => {
-            const employee = {};
+  fs.createReadStream(filePath)
+    .pipe(csv())
+    .on('data', (row) => {
+      const employee = {};
 
-            // Dynamically map all columns
-            Object.keys(row).forEach(key => {
-                employee[key] = row[key];
-            });
+      // Dynamically map all columns to arrays except internetEmail
+      Object.keys(row).forEach((key) => {
+        if (key === 'internetEmail') {
+          // Keep internetEmail as string
+          employee[key] = row[key];
+        } else {
+          // Convert to an array (single element by default)
+          // If you expect multiple comma-separated values, you could do row[key].split(',')
+          employee[key] = row[key] ? [row[key]] : [];
+        }
+      });
 
-            employees.push(employee);
-        })
-        .on('end', async () => {
-            try {
-                const bulkOps = employees.map((employee) => ({
-                    updateOne: {
-                        filter: { internetEmail: employee.internetEmail },
-                        update: { $set: employee },
-                        upsert: true,
-                    },
-                }));
+      employees.push(employee);
+    })
+    .on('end', async () => {
+      try {
+        const bulkOps = employees.map((employee) => ({
+          updateOne: {
+            filter: { internetEmail: employee.internetEmail },
+            update: { $set: employee },
+            upsert: true,
+          },
+        }));
 
-                await Employee.bulkWrite(bulkOps);
-                res.status(200).json({ message: 'Bulk upload successful!', count: employees.length });
-            } catch (err) {
-                console.error('Error in bulk write:', err);
-                res.status(500).json({ message: 'Error uploading employees.', error: err.message });
-            } finally {
-                fs.unlinkSync(filePath);
-            }
-        })
-        .on('error', (err) => {
-            console.error('Error reading CSV file:', err);
-            res.status(500).json({ message: 'Error processing CSV file.', error: err.message });
-        });
+        await Employee.bulkWrite(bulkOps);
+        res
+          .status(200)
+          .json({ message: 'Bulk upload successful!', count: employees.length });
+      } catch (err) {
+        console.error('Error in bulk write:', err);
+        res
+          .status(500)
+          .json({ message: 'Error uploading employees.', error: err.message });
+      } finally {
+        fs.unlinkSync(filePath);
+      }
+    })
+    .on('error', (err) => {
+      console.error('Error reading CSV file:', err);
+      res
+        .status(500)
+        .json({ message: 'Error processing CSV file.', error: err.message });
+    });
 };
 
-// Send email function
+// -----------------------------------
+// 2) Helper: Send Email to Single Employee
+// -----------------------------------
 const sendEmail = async (employee) => {
-  const uniqueLink = generateUniqueLink(employee.serialNumbers[0], 'serialNumber');
+  // Because serialNumber is now an array, safely pick the first element
+  const sn = employee.serialNumber && employee.serialNumber.length > 0
+    ? employee.serialNumber[0]
+    : 'UnknownSN';
+
+  const uniqueLink = generateUniqueLink(sn, 'serialNumber');
+  
   await transporter.sendMail({
     from: process.env.EMAIL_USER,
     to: employee.internetEmail,
     subject: 'Form Submission Request',
     text: `Please fill out the form using this link: ${uniqueLink}`,
   });
+  
   employee.lastEmailSent = new Date();
   await employee.save();
 };
 
-
+// -----------------------------------
+// 3) Submit Form (Reconcile Data)
+// -----------------------------------
 const submitForm = async (req, res) => {
   const { token, formDetails, serialNumber } = req.body;
-  console.log({formDetails}, serialNumber)
+  console.log({ formDetails }, serialNumber);
 
   try {
     // Verify the token to authenticate the user
@@ -96,55 +120,65 @@ const submitForm = async (req, res) => {
     if (!employee) {
       return res.status(404).json({ message: 'Employee not found.' });
     }
-console.log(`database value : ${employee.serialNumber}`)
-    // Reconcile the serial number
-    if (employee.serialNumber === serialNumber) {
-      employee.reconciliationStatus = 'Yes'; // Update reconciliation status
-      employee.serialNumberEntered = serialNumber; // Store the entered serial number
-      employee.assetCondition = formDetails.assetCondition || employee.assetCondition; // Update asset condition if provided
+
+    console.log('database value (serialNumber):', employee.serialNumber);
+
+    // Because serialNumber is an array, we check if the submitted serialNumber is among them
+    if (employee.serialNumber && employee.serialNumber.includes(serialNumber)) {
+      // Mark reconciliationStatus as ["Yes"]
+      employee.reconciliationStatus = ['Yes'];
+
+      // Store the entered serialNumber as an array (or append if desired)
+      employee.serialNumberEntered = [serialNumber];
+
+      // Update assetCondition if provided
+      if (formDetails.assetCondition) {
+        employee.assetCondition = [formDetails.assetCondition];
+      }
 
       await employee.save();
 
-      return res.status(200).json({ 
-        message: 'Form submitted successfully and serial number reconciled.', 
-        correct: true 
-      });
+      return res
+        .status(200)
+        .json({
+          message: 'Form submitted successfully and serial number reconciled.',
+          correct: true,
+        });
     } else {
-      return res.status(400).json({ 
-        message: 'Serial number does not match our records.', 
-        correct: false 
-      });
+      return res
+        .status(400)
+        .json({
+          message: 'Serial number does not match our records.',
+          correct: false,
+        });
     }
   } catch (err) {
     console.error('Error:', err);
-    return res.status(401).json({ 
-      message: 'Invalid or expired token.', 
-      correct: false 
-    });
+    return res
+      .status(401)
+      .json({ message: 'Invalid or expired token.', correct: false });
   }
 };
 
-
-
-
+// -----------------------------------
+// 4) Get Dashboard
+// -----------------------------------
 const getDashboard = async (req, res) => {
-    try {
-      // Fetch all employee data dynamically
-      const employees = await Employee.find().lean(); // Using .lean() for better performance
-  
-      // Send the entire data directly without mapping
-      res.status(200).json(employees);
-    } catch (err) {
-      console.error('Error fetching dashboard data:', err);
-      res.status(500).json({ message: 'Error fetching dashboard data.', error: err.message });
-    }
-  };
-  
+  try {
+    // Fetch all employee data
+    const employees = await Employee.find().lean(); 
+    res.status(200).json(employees);
+  } catch (err) {
+    console.error('Error fetching dashboard data:', err);
+    res
+      .status(500)
+      .json({ message: 'Error fetching dashboard data.', error: err.message });
+  }
+};
 
-
-
-
-// Delete all employees
+// -----------------------------------
+// 5) Delete All Employees
+// -----------------------------------
 const deleteAllEmployees = async (req, res) => {
   try {
     await Employee.deleteMany({});
@@ -154,7 +188,9 @@ const deleteAllEmployees = async (req, res) => {
   }
 };
 
-// Send Emails
+// -----------------------------------
+// 6) Send Emails to All Employees
+// -----------------------------------
 const sendEmails = async (req, res) => {
   try {
     const employees = await Employee.find();
@@ -162,7 +198,7 @@ const sendEmails = async (req, res) => {
     const promises = employees.map(async (employee) => {
       const uniqueLink = generateUniqueLink(employee.internetEmail, 'email');
 
-      console.log("LINK---->", uniqueLink);
+      console.log('LINK---->', uniqueLink);
 
       await transporter.sendMail({
         from: process.env.EMAIL_USER,
@@ -202,7 +238,7 @@ const sendEmails = async (req, res) => {
           <p>Thank you for your prompt attention.</p>
 
           <p>Best regards,<br>Asset Management Team</p>
-        `
+        `,
       });
 
       employee.lastEmailSent = new Date();
@@ -216,9 +252,9 @@ const sendEmails = async (req, res) => {
   }
 };
 
-
-
-
+// -----------------------------------
+// 7) Get Form
+// -----------------------------------
 const getForm = async (req, res) => {
   const { identifier } = req.user;
 
@@ -228,49 +264,60 @@ const getForm = async (req, res) => {
       return res.status(404).json({ message: 'Employee not found.' });
     }
 
-    const name = employee.internetEmail.split('@')[0]; // Extract name from email
+    const name = employee.internetEmail.split('@')[0]; 
     const email = employee.internetEmail;
 
-    res.status(200).json({ name, email }); // Only return name and email
+    res.status(200).json({ name, email });
   } catch (err) {
     res.status(500).json({ message: 'Error accessing form.', error: err.message });
   }
 };
 
-
-
-
-// Delete a single employee
+// -----------------------------------
+// 8) Delete a Single Employee
+// -----------------------------------
 const deleteEmployee = async (req, res) => {
-    const { id } = req.params;
-    try {
-      const result = await Employee.findByIdAndDelete(id);
-      if (result) {
-        res.json({ message: 'Employee deleted successfully!' });
-      } else {
-        res.status(404).json({ message: 'Employee not found.' });
-      }
-    } catch (err) {
-      res.status(500).json({ message: 'Error deleting employee.', error: err.message });
+  const { id } = req.params;
+  try {
+    const result = await Employee.findByIdAndDelete(id);
+    if (result) {
+      res.json({ message: 'Employee deleted successfully!' });
+    } else {
+      res.status(404).json({ message: 'Employee not found.' });
     }
-  };
-  
-  // Update a single employee
-  const updateEmployee = async (req, res) => {
-    const { id } = req.params;
-    const updateData = req.body;
-  
-    try {
-      const updatedEmployee = await Employee.findByIdAndUpdate(id, updateData, { new: true });
-      if (updatedEmployee) {
-        res.json({ message: 'Employee updated successfully!', employee: updatedEmployee });
-      } else {
-        res.status(404).json({ message: 'Employee not found.' });
-      }
-    } catch (err) {
-      res.status(500).json({ message: 'Error updating employee.', error: err.message });
+  } catch (err) {
+    res.status(500).json({ message: 'Error deleting employee.', error: err.message });
+  }
+};
+
+// -----------------------------------
+// 9) Update a Single Employee
+// -----------------------------------
+const updateEmployee = async (req, res) => {
+  const { id } = req.params;
+  const updateData = req.body;
+
+  try {
+    const updatedEmployee = await Employee.findByIdAndUpdate(id, updateData, {
+      new: true,
+    });
+    if (updatedEmployee) {
+      res.json({ message: 'Employee updated successfully!', employee: updatedEmployee });
+    } else {
+      res.status(404).json({ message: 'Employee not found.' });
     }
-  };
-  
-  module.exports = { bulkUpload, submitForm, getDashboard, deleteAllEmployees, sendEmails, deleteEmployee, updateEmployee , getForm};
-  
+  } catch (err) {
+    res.status(500).json({ message: 'Error updating employee.', error: err.message });
+  }
+};
+
+module.exports = {
+  bulkUpload,
+  submitForm,
+  getDashboard,
+  deleteAllEmployees,
+  sendEmails,
+  deleteEmployee,
+  updateEmployee,
+  getForm,
+};
