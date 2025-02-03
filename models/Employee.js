@@ -1,30 +1,36 @@
 const mongoose = require('mongoose');
 
-const employeeSchema = new mongoose.Schema(
-  {
-    _id: { type: mongoose.Schema.Types.ObjectId, auto: true },
-    itamOrganization: { type: [String], required: true },
-    assetId: { type: [String], required: true },
-    serialNumber: { type: [String], required: true },
-    manufacturerName: { type: [String], required: true },
-    modelVersion: { type: [String], required: true },
-    building: { type: [String], required: true },
-    locationId: { type: [String], required: true },
-    
-    // Keep internetEmail as a single String.
-    internetEmail: { type: String, required: true, unique: true },
-    
-    department: { type: [String], required: true },
-    employeeId: { type: [String], required: true },
-    managerEmployeeId: { type: [String], required: true },
-    managerEmailId: { type: [String], required: true },
-    emailDelivery: { type: [String], required: true },
-    serialNumberEntered: { type: [String], required: true },
-    reconciliationStatus: { type: [String], required: true },
-    assetCondition: { type: [String], required: true },
-    assetConditionEntered: { type: [String], required: true },
-  },
-  { strict: false } // Allows dynamic fields if needed
-);
+const assetSchema = new mongoose.Schema({
+  itamOrganization: { type: String },
+  assetId: { type: String },
+  serialNumber: { type: String, required: true, unique: true }, // Ensuring unique serialNumber
+  manufacturerName: { type: String },
+  modelVersion: { type: String },
+  building: { type: String },
+  locationId: { type: String },
+  department: { type: String },
+  employeeId: { type: String },
+  managerEmployeeId: { type: String },
+  managerEmailId: { type: String },
+  emailDelivery: { type: String },
+  serialNumberEntered: { type: String },
+  reconciliationStatus: { type: String },
+  assetCondition: { type: String },
+  timestamp: { type: Date, default: Date.now }
+});
+
+const employeeSchema = new mongoose.Schema({
+  internetEmail: { type: String, required: true, unique: true }, // Ensuring unique email
+  assets: {
+    type: [assetSchema],
+    validate: {
+      validator: function (assets) {
+        const serialNumbers = assets.map(a => a.serialNumber);
+        return new Set(serialNumbers).size === serialNumbers.length; // Ensuring no duplicate serialNumbers
+      },
+      message: 'Duplicate serialNumber found in assets array.'
+    }
+  }
+});
 
 module.exports = mongoose.model('Employee', employeeSchema);
