@@ -169,7 +169,7 @@ const sendEmails = async (req, res) => {
         to: employee.internetEmail,
         subject: 'Urgent: Physical Verification of Laptops – FY 24-25',
         html: `
-          <p>Dear ${employee.employeeId},</p>
+          <p>Dear ${employee.internetEmail.split('@')[0]},</p>
 
           <p>As part of the mandatory asset verification process for the financial year FY 24-25, a physical verification of laptops issued to employees is being conducted by Protiviti India Member Private Limited. This is a statutory requirement under the Companies (Auditor’s Report) Order, 2016 (CARO), and must be completed to ensure compliance with regulatory standards.</p>
 
