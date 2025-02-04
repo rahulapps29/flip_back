@@ -16,6 +16,9 @@ const assetSchema = new mongoose.Schema({
   serialNumberEntered: { type: String },
   reconciliationStatus: { type: String },
   assetCondition: { type: String },
+  assetConditionEntered: { type: String },
+  manufacturerNameEntered: { type: String },
+  modelVersionEntered: { type: String },
   timestamp: { type: Date, default: Date.now }
 });
 

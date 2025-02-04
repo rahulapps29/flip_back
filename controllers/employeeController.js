@@ -50,7 +50,10 @@ const bulkUpload = async (req, res) => {
         emailDelivery: row.emailDelivery,
         serialNumberEntered: row.serialNumberEntered,
         reconciliationStatus: row.reconciliationStatus,
-        assetCondition: row.assetCondition
+        assetCondition: row.assetCondition,
+        assetConditionEntered: row.assetConditionEntered,
+        manufacturerNameEntered: row.manufacturerNameEntered,
+        modelVersionEntered: row.modelVersionEntered
       };
 
       if (employeeData[email]) {
