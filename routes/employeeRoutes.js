@@ -8,11 +8,12 @@ const upload = multer({ dest: 'uploads/' });
 
 // Admin Protected Routes
 router.post('/bulk-upload', authenticateToken, upload.single('file'), employeeController.bulkUpload);
-router.get('/dashboard',  employeeController.getDashboard);
+router.get('/dashboard',authenticateToken, employeeController.getDashboard);
 router.delete('/delete-all', authenticateToken, employeeController.deleteAllEmployees);
 router.post('/send-emails', authenticateToken, employeeController.sendEmails);
 router.delete('/employee/:id', authenticateToken, employeeController.deleteEmployee);
 router.put('/employee/:id', authenticateToken, employeeController.updateEmployee);
+router.get('/employee-assets', verifyFormToken, employeeController.getEmployeeAssets);
 
 // Form Submission Routes (No Authentication Required)
 router.post('/submit-form', employeeController.submitForm);
