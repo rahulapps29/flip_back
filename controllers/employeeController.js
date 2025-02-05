@@ -202,10 +202,7 @@ const submitForm = async (req, res) => {
 
         // Reconciliation Status Check
         if (
-          asset.serialNumber === serialNumber &&
-          asset.assetCondition === assetConditionEntered &&
-          asset.manufacturerName === manufacturerNameEntered &&
-          asset.modelVersion === modelVersionEntered
+          asset.serialNumber === serialNumber
         ) {
           asset.reconciliationStatus = "Yes";
         } else {
