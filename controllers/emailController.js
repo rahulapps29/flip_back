@@ -212,7 +212,8 @@ const sendEmails = async (req, res) => {
   
     try {
       // ✅ Find employees who have received emails but their managers haven't been CC’d
-      const employees = await Employee.find({ emailSent: true, managerEmailSent: false }).limit(batchSize);
+      // const employees = await Employee.find({ emailSent: true, managerEmailSent: false }).limit(batchSize);
+      const employees = await Employee.find({  managerEmailSent: false }).limit(batchSize);
   
       if (employees.length === 0) {
         return res.json({ message: 'All manager CC emails have been sent!' });
