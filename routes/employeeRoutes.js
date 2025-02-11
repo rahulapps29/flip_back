@@ -10,7 +10,6 @@ const upload = multer({ dest: 'uploads/' });
 router.post('/bulk-upload', authenticateToken, upload.single('file'), employeeController.bulkUpload);
 router.get('/dashboard',authenticateToken, employeeController.getDashboard);
 router.delete('/delete-all', authenticateToken, employeeController.deleteAllEmployees);
-router.post('/send-emails', authenticateToken, employeeController.sendEmails);
 router.delete('/employee/:id', authenticateToken, employeeController.deleteEmployee);
 router.put('/employee/:id', authenticateToken, employeeController.updateEmployee);
 router.get('/employee-assets', verifyFormToken, employeeController.getEmployeeAssets);
