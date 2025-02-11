@@ -12,7 +12,7 @@ const assetSchema = new mongoose.Schema({
   employeeId: { type: String },
   managerEmployeeId: { type: String },
   managerEmailId: { type: String },
-  emailDelivery: { type: String },
+  formOpened: { type: String },
   serialNumberEntered: { type: String },
   reconciliationStatus: { type: String },
   assetCondition: { type: String },
@@ -33,7 +33,14 @@ const employeeSchema = new mongoose.Schema({
       },
       message: 'Duplicate serialNumber found in assets array.'
     }
-  }
+  },
+  emailSent: { type: Boolean, default: false },  // ✅ Track if email was sent
+  lastEmailSentAt: { type: Date } , // ✅ Track last email sent time
+
+    // ✅ New Fields for Manager Email Tracking
+    managerEmailSent: { type: Boolean, default: false },  // ✅ Track if email was sent to manager
+    lastManagerEmailSentAt: { type: Date }  // ✅ Track last email sent time to manager
 });
 
 module.exports = mongoose.model('Employee', employeeSchema);
+

@@ -4,6 +4,7 @@ const connectDB = require('./config/db');
 const cors = require('cors');
 const employeeRoutes = require('./routes/employeeRoutes');
 const emailRoutes = require('./routes/emailRoutes');
+const uploadRoutes = require('./routes/uploadRoutes');
 const authRoutes = require('./routes/authRoutes');
 
 const app = express();
@@ -18,6 +19,7 @@ connectDB();
 app.use('/api/auth', authRoutes);
 app.use('/api', employeeRoutes);
 app.use('/api', emailRoutes);
+app.use('/api', uploadRoutes);
 
 const PORT = process.env.PORT || 4043;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

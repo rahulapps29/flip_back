@@ -7,7 +7,7 @@ const { authenticateToken, verifyFormToken } = require('../middleware/authMiddle
 const upload = multer({ dest: 'uploads/' });
 
 // Admin Protected Routes
-router.post('/bulk-upload', authenticateToken, upload.single('file'), employeeController.bulkUpload);
+// router.post('/bulk-upload', authenticateToken, upload.single('file'), employeeController.bulkUpload);
 router.get('/dashboard',authenticateToken, employeeController.getDashboard);
 router.delete('/delete-all', authenticateToken, employeeController.deleteAllEmployees);
 router.delete('/employee/:id', authenticateToken, employeeController.deleteEmployee);
