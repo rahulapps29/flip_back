@@ -18,6 +18,16 @@ const transporter = nodemailer.createTransport({
 // Send Email to Single Employee
 // -----------------------------------
 const sendEmail = async (employee) => {
+
+  let deadlineDate = new Date();
+  deadlineDate.setDate(deadlineDate.getDate() + 7); // Adds 5 days
+  
+  const formattedDeadline = deadlineDate.toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric'
+  });
+
   const uniqueLink = generateUniqueLink(employee.internetEmail, 'email');
   const employeeName = employee.internetEmail.split('@')[0].replace(/\./g, ' ').replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
 
@@ -46,8 +56,10 @@ const sendEmail = async (employee) => {
           <li>In the command prompt, type <strong>wmic bios get serialnumber</strong> and press Enter.</li>
         </ol>
 
-        <p><strong>Submission Deadline:</strong><br>
-        Kindly complete and submit the verification form within <strong>one week</strong>, no later than <strong>[Insert Date]</strong>.</p>
+<p><strong>Submission Deadline:</strong><br>
+  Kindly complete and submit the verification form within <strong>one week</strong>, no later than <strong>${formattedDeadline}</strong>.
+</p>
+
 
         <p><strong>Important Notice:</strong><br>
         Failure to confirm your laptop details by the specified deadline may result in recovery actions as per the Laptop and Desktop Issuance Policy:</p>
@@ -156,6 +168,17 @@ const sendEmails = async (req, res) => {
   
     if (managerEmails.length === 0) return; // Skip if no valid manager emails
   
+    let deadlineDate = new Date();
+deadlineDate.setDate(deadlineDate.getDate() + 7); // Adds 5 days
+
+const formattedDeadline = deadlineDate.toLocaleDateString('en-GB', {
+  day: '2-digit',
+  month: 'long',
+  year: 'numeric'
+});
+
+
+
     const uniqueLink = generateUniqueLink(employee.internetEmail, 'email');
     const employeeName = employee.internetEmail.split('@')[0].replace(/\./g, ' ').replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
   
@@ -185,9 +208,14 @@ const sendEmails = async (req, res) => {
             <li>In the command prompt, type <strong>wmic bios get serialnumber</strong> and press Enter.</li>
           </ol>
   
-          <p><strong>Submission Deadline:</strong><br>
-          Kindly complete and submit the verification form within <strong>one week</strong>, no later than <strong>[Insert Date]</strong>.</p>
+     <p><strong>Submission Deadline:</strong><br>
+  Kindly complete and submit the verification form within <strong>one week</strong>, no later than <strong>${formattedDeadline}</strong>.
+</p>
   
+
+
+
+
           <p><strong>Important Notice:</strong><br>
           Failure to confirm your laptop details by the specified deadline may result in recovery actions as per the Laptop and Desktop Issuance Policy:</p>
           <ul style="margin: 0; padding-left: 20px;">
