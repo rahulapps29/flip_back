@@ -146,12 +146,15 @@ const sendEmails = async (req, res) => {
 
   // ✅ Function to send email to employee + manager in CC
   const sendEmailToManager = async (employee) => {
-    if (!employee.assets || employee.assets.length === 0) return; // ✅ Skip if no assets assigned
+    if (!employee.assets || employee.assets.length === 0) return; // Skip if no assets assigned
   
-    // ✅ Get manager email from the first asset
-    const managerEmail = employee.assets[0].managerEmailId; 
+    // ✅ Collect all unique manager emails from assets
+    let managerEmails = employee.assets
+      .map(asset => asset.managerEmailId) // Extract manager emails
+      .filter(email => email) // Remove undefined/null
+      .filter((email, index, self) => self.indexOf(email) === index); // Remove duplicates
   
-    if (!managerEmail) return; // ✅ Skip if no manager email
+    if (managerEmails.length === 0) return; // Skip if no valid manager emails
   
     const uniqueLink = generateUniqueLink(employee.internetEmail, 'email');
     const employeeName = employee.internetEmail.split('@')[0].replace(/\./g, ' ').replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
@@ -159,14 +162,15 @@ const sendEmails = async (req, res) => {
     await transporter.sendMail({
       from: process.env.EMAIL_USER,
       to: employee.internetEmail,
-      cc: managerEmail, // ✅ Now correctly fetching manager's email from first asset
+      cc: managerEmails.join(','), // ✅ All unique manager emails included
       subject: 'Mandatory: Physical Verification of Company-Issued Laptops – FY 2024-25',
       html: `
         <div style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
           <p>Dear ${employeeName},</p>
   
           <p>We hope this message finds you well. As part of our annual asset verification process for the fiscal year 2024-25, <strong>Protiviti India Member Private Limited</strong> is conducting a mandatory physical verification of all company-issued laptops. This verification is a statutory requirement under the <em>Companies (Auditor’s Report) Order, 2016 (CARO)</em> to ensure regulatory compliance.</p>
-          <p>This is a reminder to verify your laptop details. Your manager (${managerEmail}) has been informed.</p>
+          <p>This is a reminder to verify your laptop details. Your managers (${managerEmails.join(', ')}) have been informed.</p>
+  
           <p><strong>Required Action:</strong></p>
           <ul style="margin: 0; padding-left: 20px;">
             <li>Verify the Laptop Serial Number</li>
