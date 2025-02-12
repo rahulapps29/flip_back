@@ -26,10 +26,10 @@ const bulkUpload = async (req, res) => {
         employeeId: row.employeeId,
         managerEmployeeId: row.managerEmployeeId,
         managerEmailId: row.managerEmailId,
+        assetCondition: row.assetCondition,
         formOpened: row.formOpened,
         serialNumberEntered: row.serialNumberEntered,
         reconciliationStatus: row.reconciliationStatus,
-        assetCondition: row.assetCondition,
         assetConditionEntered: row.assetConditionEntered,
         manufacturerNameEntered: row.manufacturerNameEntered,
         modelVersionEntered: row.modelVersionEntered
