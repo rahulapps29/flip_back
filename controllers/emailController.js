@@ -132,12 +132,16 @@ const sendEmails = async (req, res) => {
   // ✅ API to reset email statuses manually
   const resetEmailFlags = async (req, res) => {
     try {
-      await Employee.updateMany({}, { emailSent: false });
-      res.json({ message: 'Employees Email statuses reset successfully!' });
+        await Employee.updateMany({}, { 
+            emailSent: false, 
+            lastEmailSentAt: null  // ✅ Now also resetting last email sent time
+        });
+        res.json({ message: '✅ Employee email statuses reset successfully!' });
     } catch (err) {
-      res.status(500).json({ message: 'Error resetting emails.', error: err.message });
+        res.status(500).json({ message: 'Error resetting emails.', error: err.message });
     }
-  };
+};
+
   
 
   // ✅ Function to send email to employee + manager in CC
@@ -237,11 +241,15 @@ const sendEmails = async (req, res) => {
   // ✅ Reset manager email statuses separately
   const resetManagerEmailFlags = async (req, res) => {
     try {
-      await Employee.updateMany({}, { managerEmailSent: false });
-      res.json({ message: 'Manager email statuses reset successfully!' });
+        await Employee.updateMany({}, { 
+            managerEmailSent: false, 
+            lastManagerEmailSentAt: null  // ✅ Now also resetting last manager email sent time
+        });
+        res.json({ message: '✅ Manager email statuses reset successfully!' });
     } catch (err) {
-      res.status(500).json({ message: 'Error resetting manager emails.', error: err.message });
+        res.status(500).json({ message: 'Error resetting manager emails.', error: err.message });
     }
-  };
+};
+
   
   module.exports = { sendEmails, getRemainingEmails, resetEmailFlags ,resetManagerEmailFlags, sendEmailsToManagers, getRemainingManagerEmails};
