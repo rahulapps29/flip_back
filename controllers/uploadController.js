@@ -23,30 +23,40 @@ const bulkUpload = async (req, res) => {
   const employeeData = {};
   const errors = [];
   let headersChecked = false; // Track if headers have been checked
+  let rowNumber = 1; // Start row numbering from 1
+
 
   fs.createReadStream(filePath)
     .pipe(csv())
     .on('headers', (headers) => {
       // Validate required headers
       const missingHeaders = requiredHeaders.filter(header => !headers.includes(header));
+      // if (missingHeaders.length > 0) {
+      //   errors.push({ error: `Missing headers: ${missingHeaders.join(', ')}` });
+      // }
       if (missingHeaders.length > 0) {
-        errors.push({ error: `Missing headers: ${missingHeaders.join(', ')}` });
+        errors.push({ row: 'Header Validation', error: `Missing headers: ${missingHeaders.join(', ')}` });
       }
+      
       headersChecked = true;
     })
     .on('data', (row) => {
       if (!headersChecked) return; // Ensure headers are checked before processing rows
-
+    
       const email = row.internetEmail ? row.internetEmail.trim() : '';
       const managerEmail = row.managerEmailId ? row.managerEmailId.trim() : '';
-
+    
       // Validate emails
       if (!validateEmail(email)) {
-        errors.push({ row: row, error: `Invalid email format: "${email}"` });
+        errors.push({ row: rowNumber, error: `Invalid email format: "${email}"` });
       }
-      if (managerEmail && !validateEmail(managerEmail)) { // Only validate if managerEmailId is present
-        errors.push({ row: row, error: `Invalid manager email format: "${managerEmail}"` });
+      if (managerEmail && !validateEmail(managerEmail)) {
+        errors.push({ row: rowNumber, error: `Invalid manager email format: "${managerEmail}"` });
       }
+    
+      rowNumber++; // Move to the next row
+    
+    
 
       const asset = {
         itamOrganization: row.itamOrganization,
@@ -87,6 +97,14 @@ const bulkUpload = async (req, res) => {
         };
       }
     })
+
+
+
+
+
+
+
+
     .on('end', async () => {
       if (errors.length > 0) {
         fs.unlinkSync(filePath); // Delete the file if validation fails
