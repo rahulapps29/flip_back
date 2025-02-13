@@ -2,6 +2,18 @@ const fs = require('fs');
 const csv = require('csv-parser');
 const Employee = require('../models/Employee');
 
+const validateEmail = (email) => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return email && emailRegex.test(email); // Ensures email is not empty and follows the pattern
+};
+
+const requiredHeaders = [
+  'internetEmail', 'managerEmailId', 'itamOrganization', 'assetId', 'serialNumber', 
+  'manufacturerName', 'modelVersion', 'building', 'locationId', 'department',
+  'employeeId', 'managerEmployeeId', 'assetCondition', 'formOpened', 'serialNumberEntered',
+  'reconciliationStatus', 'assetConditionEntered', 'manufacturerNameEntered', 'modelVersionEntered'
+];
+
 const bulkUpload = async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ message: 'No file uploaded.' });
@@ -9,11 +21,33 @@ const bulkUpload = async (req, res) => {
 
   const filePath = req.file.path;
   const employeeData = {};
+  const errors = [];
+  let headersChecked = false; // Track if headers have been checked
 
   fs.createReadStream(filePath)
     .pipe(csv())
+    .on('headers', (headers) => {
+      // Validate required headers
+      const missingHeaders = requiredHeaders.filter(header => !headers.includes(header));
+      if (missingHeaders.length > 0) {
+        errors.push({ error: `Missing headers: ${missingHeaders.join(', ')}` });
+      }
+      headersChecked = true;
+    })
     .on('data', (row) => {
-      const email = row.internetEmail;
+      if (!headersChecked) return; // Ensure headers are checked before processing rows
+
+      const email = row.internetEmail ? row.internetEmail.trim() : '';
+      const managerEmail = row.managerEmailId ? row.managerEmailId.trim() : '';
+
+      // Validate emails
+      if (!validateEmail(email)) {
+        errors.push({ row: row, error: `Invalid email format: "${email}"` });
+      }
+      if (managerEmail && !validateEmail(managerEmail)) { // Only validate if managerEmailId is present
+        errors.push({ row: row, error: `Invalid manager email format: "${managerEmail}"` });
+      }
+
       const asset = {
         itamOrganization: row.itamOrganization,
         assetId: row.assetId,
@@ -46,14 +80,19 @@ const bulkUpload = async (req, res) => {
         employeeData[email] = {
           internetEmail: email,
           assets: [asset],
-          emailSent: row.emailSent === 'true', // Convert CSV boolean
+          emailSent: row.emailSent === 'true',
           lastEmailSentAt: row.lastEmailSentAt ? new Date(row.lastEmailSentAt) : null,
-          managerEmailSent: row.managerEmailSent === 'true', // Convert CSV boolean
+          managerEmailSent: row.managerEmailSent === 'true',
           lastManagerEmailSentAt: row.lastManagerEmailSentAt ? new Date(row.lastManagerEmailSentAt) : null
         };
       }
     })
     .on('end', async () => {
+      if (errors.length > 0) {
+        fs.unlinkSync(filePath); // Delete the file if validation fails
+        return res.status(400).json({ message: 'Validation errors found', errors });
+      }
+
       try {
         const employees = Object.values(employeeData);
 
@@ -98,5 +137,5 @@ const bulkUpload = async (req, res) => {
 };
 
 module.exports = {
-    bulkUpload,
+  bulkUpload,
 };
