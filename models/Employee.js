@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
 const assetSchema = new mongoose.Schema({
   itamOrganization: { type: String },
@@ -19,7 +19,7 @@ const assetSchema = new mongoose.Schema({
   assetConditionEntered: { type: String },
   manufacturerNameEntered: { type: String },
   modelVersionEntered: { type: String },
-  timestamp: { type: Date, default: Date.now }
+  timestamp: { type: Date, default: Date.now },
 });
 
 const employeeSchema = new mongoose.Schema({
@@ -28,19 +28,18 @@ const employeeSchema = new mongoose.Schema({
     type: [assetSchema],
     validate: {
       validator: function (assets) {
-        const serialNumbers = assets.map(a => a.serialNumber);
+        const serialNumbers = assets.map((a) => a.serialNumber);
         return new Set(serialNumbers).size === serialNumbers.length; // Ensuring no duplicate serialNumbers
       },
-      message: 'Duplicate serialNumber found in assets array.'
-    }
+      message: "Duplicate serialNumber found in assets array.",
+    },
   },
-  emailSent: { type: Boolean, default: false },  // ✅ Track if email was sent
-  lastEmailSentAt: { type: Date } , // ✅ Track last email sent time
+  emailSent: { type: Boolean, default: false }, // ✅ Track if email was sent
+  lastEmailSentAt: { type: Date }, // ✅ Track last email sent time
 
-    // ✅ New Fields for Manager Email Tracking
-    managerEmailSent: { type: Boolean, default: false },  // ✅ Track if email was sent to manager
-    lastManagerEmailSentAt: { type: Date }  // ✅ Track last email sent time to manager
+  // ✅ New Fields for Manager Email Tracking
+  managerEmailSent: { type: Boolean, default: false }, // ✅ Track if email was sent to manager
+  lastManagerEmailSentAt: { type: Date }, // ✅ Track last email sent time to manager
 });
 
-module.exports = mongoose.model('Employee', employeeSchema);
-
+module.exports = mongoose.model("Employee", employeeSchema);

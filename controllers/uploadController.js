@@ -1,6 +1,6 @@
-const fs = require('fs');
-const csv = require('csv-parser');
-const Employee = require('../models/Employee');
+const fs = require("fs");
+const csv = require("csv-parser");
+const Employee = require("../models/Employee");
 
 const validateEmail = (email) => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -8,15 +8,30 @@ const validateEmail = (email) => {
 };
 
 const requiredHeaders = [
-  'internetEmail', 'managerEmailId', 'itamOrganization', 'assetId', 'serialNumber', 
-  'manufacturerName', 'modelVersion', 'building', 'locationId', 'department',
-  'employeeId', 'managerEmployeeId', 'assetCondition', 'formOpened', 'serialNumberEntered',
-  'reconciliationStatus', 'assetConditionEntered', 'manufacturerNameEntered', 'modelVersionEntered'
+  "internetEmail",
+  "managerEmailId",
+  "itamOrganization",
+  "assetId",
+  "serialNumber",
+  "manufacturerName",
+  "modelVersion",
+  "building",
+  "locationId",
+  "department",
+  "employeeId",
+  "managerEmployeeId",
+  "assetCondition",
+  "formOpened",
+  "serialNumberEntered",
+  "reconciliationStatus",
+  "assetConditionEntered",
+  "manufacturerNameEntered",
+  "modelVersionEntered",
 ];
 
 const bulkUpload = async (req, res) => {
   if (!req.file) {
-    return res.status(400).json({ message: 'No file uploaded.' });
+    return res.status(400).json({ message: "No file uploaded." });
   }
 
   const filePath = req.file.path;
@@ -25,38 +40,46 @@ const bulkUpload = async (req, res) => {
   let headersChecked = false; // Track if headers have been checked
   let rowNumber = 1; // Start row numbering from 1
 
-
   fs.createReadStream(filePath)
     .pipe(csv())
-    .on('headers', (headers) => {
+    .on("headers", (headers) => {
       // Validate required headers
-      const missingHeaders = requiredHeaders.filter(header => !headers.includes(header));
+      const missingHeaders = requiredHeaders.filter(
+        (header) => !headers.includes(header),
+      );
       // if (missingHeaders.length > 0) {
       //   errors.push({ error: `Missing headers: ${missingHeaders.join(', ')}` });
       // }
       if (missingHeaders.length > 0) {
-        errors.push({ row: 'Header Validation', error: `Missing headers: ${missingHeaders.join(', ')}` });
+        errors.push({
+          row: "Header Validation",
+          error: `Missing headers: ${missingHeaders.join(", ")}`,
+        });
       }
-      
+
       headersChecked = true;
     })
-    .on('data', (row) => {
+    .on("data", (row) => {
       if (!headersChecked) return; // Ensure headers are checked before processing rows
-    
-      const email = row.internetEmail ? row.internetEmail.trim() : '';
-      const managerEmail = row.managerEmailId ? row.managerEmailId.trim() : '';
-    
+
+      const email = row.internetEmail ? row.internetEmail.trim() : "";
+      const managerEmail = row.managerEmailId ? row.managerEmailId.trim() : "";
+
       // Validate emails
       if (!validateEmail(email)) {
-        errors.push({ row: rowNumber, error: `Invalid email format: "${email}"` });
+        errors.push({
+          row: rowNumber,
+          error: `Invalid email format: "${email}"`,
+        });
       }
       if (managerEmail && !validateEmail(managerEmail)) {
-        errors.push({ row: rowNumber, error: `Invalid manager email format: "${managerEmail}"` });
+        errors.push({
+          row: rowNumber,
+          error: `Invalid manager email format: "${managerEmail}"`,
+        });
       }
-    
+
       rowNumber++; // Move to the next row
-    
-    
 
       const asset = {
         itamOrganization: row.itamOrganization,
@@ -76,13 +99,15 @@ const bulkUpload = async (req, res) => {
         reconciliationStatus: row.reconciliationStatus,
         assetConditionEntered: row.assetConditionEntered,
         manufacturerNameEntered: row.manufacturerNameEntered,
-        modelVersionEntered: row.modelVersionEntered
+        modelVersionEntered: row.modelVersionEntered,
       };
 
       if (employeeData[email]) {
         const existingAssets = employeeData[email].assets;
-        const isDuplicate = existingAssets.some(existingAsset => existingAsset.serialNumber === asset.serialNumber);
-        
+        const isDuplicate = existingAssets.some(
+          (existingAsset) => existingAsset.serialNumber === asset.serialNumber,
+        );
+
         if (!isDuplicate) {
           existingAssets.push(asset);
         }
@@ -90,50 +115,55 @@ const bulkUpload = async (req, res) => {
         employeeData[email] = {
           internetEmail: email,
           assets: [asset],
-          emailSent: row.emailSent === 'true',
-          lastEmailSentAt: row.lastEmailSentAt ? new Date(row.lastEmailSentAt) : null,
-          managerEmailSent: row.managerEmailSent === 'true',
-          lastManagerEmailSentAt: row.lastManagerEmailSentAt ? new Date(row.lastManagerEmailSentAt) : null
+          emailSent: row.emailSent === "true",
+          lastEmailSentAt: row.lastEmailSentAt
+            ? new Date(row.lastEmailSentAt)
+            : null,
+          managerEmailSent: row.managerEmailSent === "true",
+          lastManagerEmailSentAt: row.lastManagerEmailSentAt
+            ? new Date(row.lastManagerEmailSentAt)
+            : null,
         };
       }
     })
 
-
-
-
-
-
-
-
-    .on('end', async () => {
+    .on("end", async () => {
       if (errors.length > 0) {
         fs.unlinkSync(filePath); // Delete the file if validation fails
-        return res.status(400).json({ message: 'Validation errors found', errors });
+        return res
+          .status(400)
+          .json({ message: "Validation errors found", errors });
       }
 
       try {
         const employees = Object.values(employeeData);
 
         for (const employee of employees) {
-          const existingEmployee = await Employee.findOne({ internetEmail: employee.internetEmail });
+          const existingEmployee = await Employee.findOne({
+            internetEmail: employee.internetEmail,
+          });
 
           if (existingEmployee) {
-            const newAssets = employee.assets.filter(asset => 
-              !existingEmployee.assets.some(existingAsset => existingAsset.serialNumber === asset.serialNumber)
+            const newAssets = employee.assets.filter(
+              (asset) =>
+                !existingEmployee.assets.some(
+                  (existingAsset) =>
+                    existingAsset.serialNumber === asset.serialNumber,
+                ),
             );
 
             if (newAssets.length > 0) {
               await Employee.updateOne(
                 { internetEmail: employee.internetEmail },
-                { 
+                {
                   $push: { assets: { $each: newAssets } },
-                  $set: { 
+                  $set: {
                     emailSent: employee.emailSent,
                     lastEmailSentAt: employee.lastEmailSentAt,
                     managerEmailSent: employee.managerEmailSent,
-                    lastManagerEmailSentAt: employee.lastManagerEmailSentAt
-                  }
-                }
+                    lastManagerEmailSentAt: employee.lastManagerEmailSentAt,
+                  },
+                },
               );
             }
           } else {
@@ -142,15 +172,19 @@ const bulkUpload = async (req, res) => {
         }
 
         fs.unlinkSync(filePath);
-        res.status(200).json({ message: 'Bulk upload successful!' });
+        res.status(200).json({ message: "Bulk upload successful!" });
       } catch (err) {
-        console.error('Error in bulk upload:', err);
-        res.status(500).json({ message: 'Error uploading employees.', error: err.message });
+        console.error("Error in bulk upload:", err);
+        res
+          .status(500)
+          .json({ message: "Error uploading employees.", error: err.message });
       }
     })
-    .on('error', (err) => {
-      console.error('Error reading CSV file:', err);
-      res.status(500).json({ message: 'Error processing CSV file.', error: err.message });
+    .on("error", (err) => {
+      console.error("Error reading CSV file:", err);
+      res
+        .status(500)
+        .json({ message: "Error processing CSV file.", error: err.message });
     });
 };
 
